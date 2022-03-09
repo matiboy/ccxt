@@ -3,7 +3,7 @@
 //  ---------------------------------------------------------------------------
 
 const Exchange = require ('./base/Exchange');
-const { AuthenticationError, ExchangeError, NotSupported } = require ('./base/errors');
+const { AuthenticationError, ExchangeError, NotSupported, BadRequest } = require ('./base/errors');
 
 //  ---------------------------------------------------------------------------
 
@@ -474,7 +474,8 @@ module.exports = class bitkub extends Exchange {
     }
 
     isFiat (code) {
-      throw new Error('Not implemented')
+        if (code === 'THB')
+            return true;
         if (code === 'USD')
             return true;
         if (code === 'EUR')
@@ -570,19 +571,22 @@ module.exports = class bitkub extends Exchange {
     }
 
     handleErrors (httpCode, reason, url, method, headers, body) {
+        // Refer to https://github.com/bitkub/bitkub-official-api-docs/blob/master/restful-api.md#error-codes
         if (typeof body !== 'string')
             return; // fallback to default error handler
         if (body.length < 2)
             return; // fallback to default error handler
         if ((body[0] === '{') || (body[0] === '[')) {
             let response = JSON.parse (body);
-            let status = this.safeString (response, 'status');
-            if (status === 'error') {
-                let code = this.safeString (response, 'code');
-                if (typeof code !== 'undefined') {
-                    if (code === 'API0005')
-                        throw new AuthenticationError (this.id + ' invalid signature, use the uid for the main account if you have subaccounts');
+            let status = this.safeInteger (response, 'error');
+            if (status > 0) {
+                if (status === 1 || ( status >= 10 && status <= 15 ) || status === 22 ) {
+                    throw new BadRequest ( this.id + ' some parameters are invalid; status: ' + status )
                 }
+                if ((status >= 2 && status <= 9) || status === 25 || status === 45 || status === 46 || status === 52 ) {
+                    throw new AuthenticationError( this.id + ' failed auth or permissions; status ' + status)
+                }
+
                 throw new ExchangeError (this.id + ' ' + this.json (response));
             }
         }
