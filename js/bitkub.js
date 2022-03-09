@@ -316,9 +316,8 @@ module.exports = class bitkub extends Exchange {
     }
 
     async cancelOrder (id, symbol = undefined, params = {}) {
-      throw new Error('Not implemented')
         await this.loadMarkets ();
-        return await this.privatePostCancelOrder ({ 'id': id });
+        return await this.privatePostMarketCancelOrder ({ 'id': id });
     }
 
     parseOrderStatus (order) {
@@ -535,26 +534,32 @@ module.exports = class bitkub extends Exchange {
         };
     }
 
+    nonce () {
+        return this.milliseconds ()
+    }
+
     sign (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
         let url = this.urls['api'];
-        url += this.implodeParams (path, params);
-        let query = this.omit (params, this.extractParams (path));
         if (api === 'public') {
-            if (Object.keys (query).length)
-                url += '?' + this.urlencode (query);
+            if (Object.keys (params).length)
+                url += '?' + this.urlencode (params);
         } else {
             this.checkRequiredCredentials ();
-            let nonce = this.nonce ().toString ();
-            let auth = nonce + this.uid + this.apiKey;
-            let signature = this.encode (this.hmac (this.encode (auth), this.encode (this.secret)));
-            query = this.extend ({
-                'key': this.apiKey,
-                'signature': signature.toUpperCase (),
-                'nonce': nonce,
-            }, query);
-            body = this.urlencode (query);
+            let ts = this.seconds()
+            let nonce = this.nonce()
+
+            params['ts'] = ts
+            params['non'] = nonce
+            
+            let signature = this.encode (this.hmac (this.encode (params), this.encode (this.secret)));
+
+            params['sig'] = signature
+            
+            body = this.urlencode (params);
             headers = {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-BTK-APIKEY': this.apiKey
             };
         }
         return { 'url': url, 'method': method, 'body': body, 'headers': headers };
