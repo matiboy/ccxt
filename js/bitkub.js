@@ -25,7 +25,7 @@ module.exports = class bitkub extends Exchange {
             },
             'urls': {
                 'logo': 'https://www.bitkub.com/static/images/logo-white.png',
-                'api': 'https://api.bitkub.com',
+                'api': 'https://api.bitkub.com/api/',
                 'www': 'https://bitkub.com',
                 'doc': 'https://github.com/bitkub/bitkub-official-api-docs/blob/master/restful-api.md',
             },
@@ -37,108 +37,43 @@ module.exports = class bitkub extends Exchange {
             'api': {
                 'public': {
                     'get': [
-                        'order_book/{pair}/',
-                        'ticker_hour/{pair}/',
-                        'ticker/{pair}/',
-                        'transactions/{pair}/',
-                        'trading-pairs-info/',
+                      'market/symbols',
                     ],
                 },
                 'private': {
                     'post': [
-                        'balance/',
-                        'balance/{pair}/',
-                        'bch_withdrawal/',
-                        'bch_address/',
-                        'user_transactions/',
-                        'user_transactions/{pair}/',
-                        'open_orders/all/',
-                        'open_orders/{pair}/',
-                        'order_status/',
-                        'cancel_order/',
-                        'buy/{pair}/',
-                        'buy/market/{pair}/',
-                        'sell/{pair}/',
-                        'sell/market/{pair}/',
-                        'ltc_withdrawal/',
-                        'ltc_address/',
-                        'eth_withdrawal/',
-                        'eth_address/',
-                        'xrp_withdrawal/',
-                        'xrp_address/',
-                        'transfer-to-main/',
-                        'transfer-from-main/',
-                        'withdrawal-requests/',
-                        'withdrawal/open/',
-                        'withdrawal/status/',
-                        'withdrawal/cancel/',
-                        'liquidation_address/new/',
-                        'liquidation_address/info/',
+                        'market/balances',
+                        'market/place-bid',
+                        'market/place-ask',
+                        'market/place-ask-by-fiat',
+                        'market/cancel-order',
+                        'market/order-info',
+                        'market/wstoken',
+                        'crypto/addresses',
+                        'crypto/withdraw',
+                        'market/my-open-orders',
+                        'market/my-order-history',
                     ],
-                },
-                'v1': {
-                    'post': [
-                        'bitcoin_deposit_address/',
-                        'unconfirmed_btc/',
-                        'bitcoin_withdrawal/',
-                        'ripple_withdrawal/',
-                        'ripple_address/',
-                    ],
-                },
+                }
             },
             'fees': {
                 'trading': {
-                    'tierBased': true,
+                    'tierBased': false,
                     'percentage': true,
                     'taker': 0.25 / 100,
                     'maker': 0.25 / 100,
                     'tiers': {
-                        'taker': [
-                            [0, 0.25 / 100],
-                            [20000, 0.24 / 100],
-                            [100000, 0.22 / 100],
-                            [400000, 0.20 / 100],
-                            [600000, 0.15 / 100],
-                            [1000000, 0.14 / 100],
-                            [2000000, 0.13 / 100],
-                            [4000000, 0.12 / 100],
-                            [20000000, 0.11 / 100],
-                            [20000001, 0.10 / 100],
-                        ],
-                        'maker': [
-                            [0, 0.25 / 100],
-                            [20000, 0.24 / 100],
-                            [100000, 0.22 / 100],
-                            [400000, 0.20 / 100],
-                            [600000, 0.15 / 100],
-                            [1000000, 0.14 / 100],
-                            [2000000, 0.13 / 100],
-                            [4000000, 0.12 / 100],
-                            [20000000, 0.11 / 100],
-                            [20000001, 0.10 / 100],
-                        ],
                     },
                 },
                 'funding': {
                     'tierBased': false,
                     'percentage': false,
                     'withdraw': {
-                        'BTC': 0,
-                        'BCH': 0,
-                        'LTC': 0,
-                        'ETH': 0,
-                        'XRP': 0,
-                        'USD': 25,
-                        'EUR': 0.90,
+                        'BTC': 0.0005,
+                        'ETH': 0.005,
                     },
                     'deposit': {
-                        'BTC': 0,
-                        'BCH': 0,
-                        'LTC': 0,
-                        'ETH': 0,
-                        'XRP': 0,
-                        'USD': 25,
-                        'EUR': 0,
+                        
                     },
                 },
             },
@@ -146,6 +81,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchMarkets () {
+      throw new Error('Not implemented')
         let markets = await this.publicGetTradingPairsInfo ();
         let result = [];
         for (let i = 0; i < markets.length; i++) {
@@ -197,6 +133,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchOrderBook (symbol, limit = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let orderbook = await this.publicGetOrderBookPair (this.extend ({
             'pair': this.marketId (symbol),
@@ -206,6 +143,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchTicker (symbol, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let ticker = await this.publicGetTickerPair (this.extend ({
             'pair': this.marketId (symbol),
@@ -237,6 +175,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     getMarketFromTrade (trade) {
+      throw new Error('Not implemented')
         trade = this.omit (trade, [
             'fee',
             'price',
@@ -262,6 +201,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     getMarketFromTrades (trades) {
+      throw new Error('Not implemented')
         let tradesBySymbol = this.indexBy (trades, 'symbol');
         let symbols = Object.keys (tradesBySymbol);
         let numSymbols = symbols.length;
@@ -271,6 +211,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     parseTrade (trade, market = undefined) {
+      throw new Error('Not implemented')
         let timestamp = undefined;
         let symbol = undefined;
         if ('date' in trade) {
@@ -339,6 +280,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchTrades (symbol, since = undefined, limit = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let market = this.market (symbol);
         let response = await this.publicGetTransactionsPair (this.extend ({
@@ -349,6 +291,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchBalance (params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let balance = await this.privatePostBalance ();
         let result = { 'info': balance };
@@ -372,6 +315,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async createOrder (symbol, type, side, amount, price = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let method = 'privatePost' + this.capitalize (side);
         let order = {
@@ -391,11 +335,13 @@ module.exports = class bitkub extends Exchange {
     }
 
     async cancelOrder (id, symbol = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         return await this.privatePostCancelOrder ({ 'id': id });
     }
 
     parseOrderStatus (order) {
+      throw new Error('Not implemented')
         if ((order['status'] === 'Queue') || (order['status'] === 'Open'))
             return 'open';
         if (order['status'] === 'Finished')
@@ -404,12 +350,14 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchOrderStatus (id, symbol = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let response = await this.privatePostOrderStatus (this.extend ({ 'id': id }, params));
         return this.parseOrderStatus (response);
     }
 
     async fetchOrder (id, symbol = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let market = undefined;
         if (typeof symbol !== 'undefined')
@@ -419,6 +367,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchMyTrades (symbol = undefined, since = undefined, limit = undefined, params = {}) {
+      throw new Error('Not implemented')
         await this.loadMarkets ();
         let request = {};
         let method = 'privatePostUserTransactions';
@@ -433,6 +382,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     parseOrder (order, market = undefined) {
+      throw new Error('Not implemented')
         let id = this.safeString (order, 'id');
         let timestamp = undefined;
         let iso8601 = undefined;
@@ -526,6 +476,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchOpenOrders (symbol = undefined, since = undefined, limit = undefined, params = {}) {
+      throw new Error('Not implemented')
         let market = undefined;
         if (typeof symbol !== 'undefined') {
             await this.loadMarkets ();
@@ -536,12 +487,14 @@ module.exports = class bitkub extends Exchange {
     }
 
     getCurrencyName (code) {
+      throw new Error('Not implemented')
         if (code === 'BTC')
             return 'bitcoin';
         return code.toLowerCase ();
     }
 
     isFiat (code) {
+      throw new Error('Not implemented')
         if (code === 'USD')
             return true;
         if (code === 'EUR')
@@ -550,6 +503,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchDepositAddress (code, params = {}) {
+      throw new Error('Not implemented')
         if (this.isFiat (code))
             throw new NotSupported (this.id + ' fiat fetchDepositAddress() for ' + code + ' is not implemented yet');
         let name = this.getCurrencyName (code);
@@ -572,6 +526,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     async withdraw (code, amount, address, tag = undefined, params = {}) {
+      throw new Error('Not implemented')
         this.checkAddress (address);
         if (this.isFiat (code))
             throw new NotSupported (this.id + ' fiat withdraw() for ' + code + ' is not implemented yet');
@@ -600,6 +555,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     sign (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
+      throw new Error('Not implemented')
         let url = this.urls['api'] + '/';
         if (api !== 'v1')
             url += this.version + '/';
@@ -627,6 +583,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     handleErrors (httpCode, reason, url, method, headers, body) {
+      throw new Error('Not implemented')
         if (typeof body !== 'string')
             return; // fallback to default error handler
         if (body.length < 2)
