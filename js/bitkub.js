@@ -50,6 +50,8 @@ module.exports = class bitkub extends Exchange {
                         'market/balances',
                         'market/place-bid',
                         'market/place-ask',
+                        'market/place-bid/test',
+                        'market/place-ask/test',
                         'market/place-ask-by-fiat',
                         'market/cancel-order',
                         'market/order-info',
@@ -191,6 +193,11 @@ module.exports = class bitkub extends Exchange {
         return undefined;
     }
 
+    marketId (symbol) {
+        const parts = symbol.split ('/')
+        return parts[1] + '_' + parts[0]
+    }
+
     parseTrade (trade, market = undefined) {
       throw new Error('Not implemented')
         let timestamp = undefined;
@@ -295,23 +302,38 @@ module.exports = class bitkub extends Exchange {
         return this.parseBalance (result);
     }
 
+    withoutTrailingZeroes (number) {
+        // TODO how will this work out in Python?
+        return parseFloat (number.toString ())
+    }
+
     async createOrder (symbol, type, side, amount, price = undefined, params = {}) {
-      throw new Error('Not implemented')
         await this.loadMarkets ();
-        let method = 'privatePost' + this.capitalize (side);
+        let method = 'privatePostMarketPlace';
+        if ( side === 'buy' ) {
+            method += 'Bid'
+        } else {
+            method += 'Ask'
+        }
         let order = {
-            'pair': this.marketId (symbol),
-            'amount': amount,
+            'sym': this.marketId (symbol),
+            'amt': this.withoutTrailingZeroes (amount),
+            'typ': type
         };
         if (type === 'market')
-            method += 'Market';
+            price = 0
         else
-            order['price'] = price;
-        method += 'Pair';
+        order['rat'] = this.withoutTrailingZeroes (price);
+        const isTest = this.safeValue (params, 'test')
+        if (isTest) {
+            method += 'Test'
+            delete params['test']
+        }
         let response = await this[method] (this.extend (order, params));
         return {
             'info': response,
             'id': response['id'],
+            'price': response['rat']
         };
     }
 
@@ -552,7 +574,7 @@ module.exports = class bitkub extends Exchange {
             let nonce = this.nonce()
 
             params['ts'] = ts
-            params['non'] = nonce
+            // params['non'] = nonce
 
             let auth = JSON.stringify (params)
             

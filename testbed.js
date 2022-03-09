@@ -6,8 +6,10 @@ client.verbose = true
 async function main() {
   try {
     await client.loadMarkets()
-    outcome = await client.cancelOrder('2')
+    // let outcome = await client.cancelOrder('2')
 
+    // console.log(outcome)
+    outcome = await client.createLimitBuyOrder('XRP/THB', 20, 100, {test: true})
     console.log(outcome)
   } catch(e) {
     console.log(e)
