@@ -17,11 +17,16 @@ module.exports = class bitkub extends Exchange {
             'version': 'v1',
             'has': {
                 'CORS': true,
+                'cancelOrder': true,
+                'createOrder': true,
+                'fetchBalance': true,
                 'fetchDepositAddress': true,
                 'fetchOrder': true,
                 'fetchOpenOrders': true,
+                'fetchMarkets': true,
                 'fetchMyTrades': true,
-                'withdraw': true,
+                'fetchOrders': true,
+                'transfer': true,
             },
             'urls': {
                 'logo': 'https://www.bitkub.com/static/images/logo-white.png',
@@ -37,7 +42,7 @@ module.exports = class bitkub extends Exchange {
             'api': {
                 'public': {
                     'get': [
-                      'market/symbols',
+                        'market/symbols',
                     ],
                 },
                 'private': {
@@ -81,52 +86,28 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchMarkets () {
-      throw new Error('Not implemented')
-        let markets = await this.publicGetTradingPairsInfo ();
+        let markets = await this.publicGetMarketSymbols ();
+
+        /*
+        {"error":"0","result":[{"id":"1","info":"Thai Baht to Bitcoin","symbol":"THB_BTC"},{"id":"2","info":"Thai Baht to Ethereum","symbol":"THB_ETH"},{"id":"3","info":"Thai Baht to Wancoin","symbol":"THB_WAN"},{"id":"4","info":"Thai Baht to Cardano","symbol":"THB_ADA"}
+        */
+        markets = markets.result
         let result = [];
         for (let i = 0; i < markets.length; i++) {
             let market = markets[i];
-            let symbol = market['name'];
-            let [ base, quote ] = symbol.split ('/');
-            let baseId = base.toLowerCase ();
-            let quoteId = quote.toLowerCase ();
-            let symbolId = baseId + '_' + quoteId;
-            let id = market['url_symbol'];
-            let precision = {
-                'amount': market['base_decimals'],
-                'price': market['counter_decimals'],
-            };
-            let parts = market['minimum_order'].split (' ');
-            let cost = parts[0];
-            // let [ cost, currency ] = market['minimum_order'].split (' ');
-            let active = (market['trading'] === 'Enabled');
-            let lot = Math.pow (10, -precision['amount']);
+            let [ quote, base ] = market['symbol'].split ('_');
+            let symbol = base + '/' + quote
+            let id = market['id'];
+            
             result.push ({
                 'id': id,
                 'symbol': symbol,
                 'base': base,
                 'quote': quote,
-                'baseId': baseId,
-                'quoteId': quoteId,
-                'symbolId': symbolId,
+                'baseId': base,
+                'quoteId': quote,
                 'info': market,
-                'lot': lot,
-                'active': active,
-                'precision': precision,
-                'limits': {
-                    'amount': {
-                        'min': lot,
-                        'max': undefined,
-                    },
-                    'price': {
-                        'min': Math.pow (10, -precision['price']),
-                        'max': undefined,
-                    },
-                    'cost': {
-                        'min': parseFloat (cost),
-                        'max': undefined,
-                    },
-                },
+                'active': true
             });
         }
         return result;
@@ -555,10 +536,7 @@ module.exports = class bitkub extends Exchange {
     }
 
     sign (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
-      throw new Error('Not implemented')
-        let url = this.urls['api'] + '/';
-        if (api !== 'v1')
-            url += this.version + '/';
+        let url = this.urls['api'];
         url += this.implodeParams (path, params);
         let query = this.omit (params, this.extractParams (path));
         if (api === 'public') {
@@ -583,7 +561,6 @@ module.exports = class bitkub extends Exchange {
     }
 
     handleErrors (httpCode, reason, url, method, headers, body) {
-      throw new Error('Not implemented')
         if (typeof body !== 'string')
             return; // fallback to default error handler
         if (body.length < 2)
