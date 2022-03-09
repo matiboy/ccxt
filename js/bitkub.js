@@ -540,9 +540,11 @@ module.exports = class bitkub extends Exchange {
 
     sign (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
         let url = this.urls['api'];
+        url += this.implodeParams (path, params);
+        let query = this.omit (params, this.extractParams (path));
         if (api === 'public') {
-            if (Object.keys (params).length)
-                url += '?' + this.urlencode (params);
+            if (Object.keys (query).length)
+                url += '?' + this.urlencode (query);
         } else {
             this.checkRequiredCredentials ();
             let ts = this.seconds()
@@ -550,12 +552,14 @@ module.exports = class bitkub extends Exchange {
 
             params['ts'] = ts
             params['non'] = nonce
+
+            let auth = JSON.stringify (params)
             
-            let signature = this.encode (this.hmac (this.encode (params), this.encode (this.secret)));
+            let signature = this.encode (this.hmac (this.encode (auth), this.encode (this.secret)));
 
             params['sig'] = signature
             
-            body = this.urlencode (params);
+            body = JSON.stringify(params);
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',

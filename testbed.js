@@ -1,11 +1,12 @@
 const bitkub = require('./js/bitkub')
-
-const client = new bitkub()
+var keys = require('./keys.local.json')
+const client = new bitkub(keys.bitkub)
 client.verbose = true
 
 async function main() {
   try {
-    const outcome = await client.fetchMarkets()
+    await client.loadMarkets()
+    outcome = await client.cancelOrder('2')
 
     console.log(outcome)
   } catch(e) {
