@@ -61,7 +61,7 @@ module.exports = class bitkub extends Exchange {
                         'market/my-open-orders',
                         'market/my-order-history',
                     ],
-                }
+                },
             },
             'fees': {
                 'trading': {
@@ -80,27 +80,41 @@ module.exports = class bitkub extends Exchange {
                         'ETH': 0.005,
                     },
                     'deposit': {
-                        
+
                     },
                 },
             },
         });
     }
 
+    parseBalance (response) {
+        const balances = response['result'];
+        const result = { 'info': balances };
+        const currencies = Object.keys (balances);
+        for (let i = 0; i < currencies.length; i++) {
+            const currency = currencies[i];
+            const balance = result[currency];
+            const code = this.safeCurrencyCode (currency);
+            const account = this.account ();
+            account['free'] = this.safeString (balance, 'available');
+            account['used'] = this.safeString (balance, 'reserved');
+            result[code] = account;
+        }
+        return this.safeBalance (result);
+    }
+
     async fetchMarkets () {
         let markets = await this.publicGetMarketSymbols ();
-
-        /*
-        {"error":"0","result":[{"id":"1","info":"Thai Baht to Bitcoin","symbol":"THB_BTC"},{"id":"2","info":"Thai Baht to Ethereum","symbol":"THB_ETH"},{"id":"3","info":"Thai Baht to Wancoin","symbol":"THB_WAN"},{"id":"4","info":"Thai Baht to Cardano","symbol":"THB_ADA"}
-        */
-        markets = markets.result
-        let result = [];
+        //
+        // {"error":"0","result":[{"id":"1","info":"Thai Baht to Bitcoin","symbol":"THB_BTC"},{"id":"2","info":"Thai Baht to Ethereum","symbol":"THB_ETH"},{"id":"3","info":"Thai Baht to Wancoin","symbol":"THB_WAN"},{"id":"4","info":"Thai Baht to Cardano","symbol":"THB_ADA"}
+        //
+        markets = markets.result;
+        const result = [];
         for (let i = 0; i < markets.length; i++) {
-            let market = markets[i];
-            let [ quote, base ] = market['symbol'].split ('_');
-            let symbol = base + '/' + quote
-            let id = market['id'];
-            
+            const market = markets[i];
+            const [ quote, base ] = market['symbol'].split ('_');
+            const symbol = base + '/' + quote;
+            const id = market['id'];
             result.push ({
                 'id': id,
                 'symbol': symbol,
@@ -109,24 +123,24 @@ module.exports = class bitkub extends Exchange {
                 'baseId': base,
                 'quoteId': quote,
                 'info': market,
-                'active': true
+                'active': true,
             });
         }
         return result;
     }
 
     async fetchOrderBook (symbol, limit = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         await this.loadMarkets ();
-        let orderbook = await this.publicGetOrderBookPair (this.extend ({
+        const orderbook = await this.publicGetOrderBookPair (this.extend ({
             'pair': this.marketId (symbol),
         }, params));
-        let timestamp = parseInt (orderbook['timestamp']) * 1000;
+        const timestamp = parseInt (orderbook['timestamp']) * 1000;
         return this.parseOrderBook (orderbook, timestamp);
     }
 
     getMarketFromTrade (trade) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         trade = this.omit (trade, [
             'fee',
             'price',
@@ -136,38 +150,34 @@ module.exports = class bitkub extends Exchange {
             'order_id',
             'side',
         ]);
-        let currencyIds = Object.keys (trade);
-        let numCurrencyIds = currencyIds.length;
-        if (numCurrencyIds > 2)
-            throw new ExchangeError (this.id + ' getMarketFromTrade too many keys: ' + this.json (currencyIds) + ' in the trade: ' + this.json (trade));
+        const currencyIds = Object.keys (trade);
+        const numCurrencyIds = currencyIds.length;
+        if (numCurrencyIds > 2) throw new ExchangeError (this.id + ' getMarketFromTrade too many keys: ' + this.json (currencyIds) + ' in the trade: ' + this.json (trade));
         if (numCurrencyIds === 2) {
             let marketId = currencyIds[0] + currencyIds[1];
-            if (marketId in this.markets_by_id)
-                return this.markets_by_id[marketId];
+            if (marketId in this.markets_by_id) return this.markets_by_id[marketId];
             marketId = currencyIds[1] + currencyIds[0];
-            if (marketId in this.markets_by_id)
-                return this.markets_by_id[marketId];
+            if (marketId in this.markets_by_id) return this.markets_by_id[marketId];
         }
         return undefined;
     }
 
     getMarketFromTrades (trades) {
-      throw new Error('Not implemented')
-        let tradesBySymbol = this.indexBy (trades, 'symbol');
-        let symbols = Object.keys (tradesBySymbol);
-        let numSymbols = symbols.length;
-        if (numSymbols === 1)
-            return this.markets[symbols[0]];
+        throw new Error ('Not implemented');
+        const tradesBySymbol = this.indexBy (trades, 'symbol');
+        const symbols = Object.keys (tradesBySymbol);
+        const numSymbols = symbols.length;
+        if (numSymbols === 1) return this.markets[symbols[0]];
         return undefined;
     }
 
     marketId (symbol) {
-        const parts = symbol.split ('/')
-        return parts[1] + '_' + parts[0]
+        const parts = symbol.split ('/');
+        return parts[1] + '_' + parts[0];
     }
 
     parseTrade (trade, market = undefined) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         let timestamp = undefined;
         let symbol = undefined;
         if ('date' in trade) {
@@ -177,34 +187,31 @@ module.exports = class bitkub extends Exchange {
         }
         // only if overrided externally
         let side = this.safeString (trade, 'side');
-        let orderId = this.safeString (trade, 'order_id');
-        if (typeof orderId === 'undefined')
+        const orderId = this.safeString (trade, 'order_id');
+        if (typeof orderId === 'undefined') {
             if (typeof side === 'undefined') {
                 side = this.safeInteger (trade, 'type');
-                if (side === 0)
-                    side = 'buy';
-                else
-                    side = 'sell';
+                if (side === 0) side = 'buy';
+                else side = 'sell';
             }
+        }
         let price = this.safeFloat (trade, 'price');
         let amount = this.safeFloat (trade, 'amount');
         let id = this.safeString (trade, 'tid');
         id = this.safeString (trade, 'id', id);
         if (typeof market === 'undefined') {
-            let keys = Object.keys (trade);
+            const keys = Object.keys (trade);
             for (let i = 0; i < keys.length; i++) {
                 if (keys[i].indexOf ('_') >= 0) {
-                    let marketId = keys[i].replace ('_', '');
-                    if (marketId in this.markets_by_id)
-                        market = this.markets_by_id[marketId];
+                    const marketId = keys[i].replace ('_', '');
+                    if (marketId in this.markets_by_id) market = this.markets_by_id[marketId];
                 }
             }
             // if the market is still not defined
             // try to deduce it from used keys
-            if (typeof market === 'undefined')
-                market = this.getMarketFromTrade (trade);
+            if (typeof market === 'undefined') market = this.getMarketFromTrade (trade);
         }
-        let feeCost = this.safeFloat (trade, 'fee');
+        const feeCost = this.safeFloat (trade, 'fee');
         let feeCurrency = undefined;
         if (typeof market !== 'undefined') {
             price = this.safeFloat (trade, market['symbolId'], price);
@@ -213,9 +220,7 @@ module.exports = class bitkub extends Exchange {
             symbol = market['symbol'];
         }
         let cost = undefined;
-        if (typeof price !== 'undefined')
-            if (typeof amount !== 'undefined')
-                cost = price * amount;
+        if (typeof price !== 'undefined') if (typeof amount !== 'undefined') cost = price * amount;
         return {
             'id': id,
             'info': trade,
@@ -236,10 +241,10 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchTrades (symbol, since = undefined, limit = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         await this.loadMarkets ();
-        let market = this.market (symbol);
-        let response = await this.publicGetTransactionsPair (this.extend ({
+        const market = this.market (symbol);
+        const response = await this.publicGetTransactionsPair (this.extend ({
             'pair': market['id'],
             'time': 'minute',
         }, params));
@@ -247,62 +252,61 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchBalance (params = {}) {
-      throw new Error('Not implemented')
         await this.loadMarkets ();
-        let balance = await this.privatePostBalance ();
-        let result = { 'info': balance };
-        let currencies = Object.keys (this.currencies);
-        for (let i = 0; i < currencies.length; i++) {
-            let currency = currencies[i];
-            let lowercase = currency.toLowerCase ();
-            let total = lowercase + '_balance';
-            let free = lowercase + '_available';
-            let used = lowercase + '_reserved';
-            let account = this.account ();
-            if (free in balance)
-                account['free'] = parseFloat (balance[free]);
-            if (used in balance)
-                account['used'] = parseFloat (balance[used]);
-            if (total in balance)
-                account['total'] = parseFloat (balance[total]);
-            result[currency] = account;
-        }
-        return this.parseBalance (result);
+        // {
+        //     "error": 0,
+        //     "result": {
+        //         "THB":  {
+        //         "available": 188379.27,
+        //         "reserved": 0
+        //         },
+        //         "BTC": {
+        //         "available": 8.90397323,
+        //         "reserved": 0
+        //         },
+        //         "ETH": {
+        //         "available": 10.1,
+        //         "reserved": 0
+        //         }
+        //     }
+        // }
+        const response = await this.privatePostMarketBalances ();
+        return this.parseBalance (response);
     }
 
     withoutTrailingZeroes (number) {
         // TODO how will this work out in Python?
-        return parseFloat (number.toString ())
+        return parseFloat (number.toString ());
     }
 
     async createOrder (symbol, type, side, amount, price = undefined, params = {}) {
         await this.loadMarkets ();
         let method = 'privatePostMarketPlace';
-        if ( side === 'buy' ) {
-            method += 'Bid'
+        if (side === 'buy') {
+            method += 'Bid';
         } else {
-            method += 'Ask'
+            method += 'Ask';
         }
-        let order = {
+        const order = {
             'sym': this.marketId (symbol),
             'amt': this.withoutTrailingZeroes (amount),
-            'typ': type
+            'typ': type,
         };
         if (type === 'market') {
             price = 0;
         } else {
             order['rat'] = this.withoutTrailingZeroes (price);
         }
-        const isTest = this.safeValue (params, 'test')
+        const isTest = this.safeValue (params, 'test');
         delete params['test'];
         if (isTest) {
-            method += 'Test'
+            method += 'Test';
         }
-        let response = await this[method] (this.extend (order, params));
+        const response = await this[method] (this.extend (order, params));
         return {
             'info': response,
             'id': response['id'],
-            'price': response['rat']
+            'price': response['rat'],
         };
     }
 
@@ -312,32 +316,30 @@ module.exports = class bitkub extends Exchange {
     }
 
     parseOrderStatus (order) {
-        if ((order['status'] === 'filled') || (order['remaining'] === 0))
-            return 'closed';
+        if ((order['status'] === 'filled') || (order['remaining'] === 0)) return 'closed';
         return 'open';
     }
 
     async fetchOrderStatus (id, symbol = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         await this.loadMarkets ();
-        let response = await this.privatePostOrderStatus (this.extend ({ 'id': id }, params));
+        const response = await this.privatePostOrderStatus (this.extend ({ 'id': id }, params));
         return this.parseOrderStatus (response);
     }
 
     async fetchOrder (id, symbol = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         await this.loadMarkets ();
         let market = undefined;
-        if (typeof symbol !== 'undefined')
-            market = this.market (symbol);
-        let response = await this.privatePostOrderStatus (this.extend ({ 'id': id }, params));
+        if (typeof symbol !== 'undefined') market = this.market (symbol);
+        const response = await this.privatePostOrderStatus (this.extend ({ 'id': id }, params));
         return this.parseOrder (response, market);
     }
 
     async fetchMyTrades (symbol = undefined, since = undefined, limit = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         await this.loadMarkets ();
-        let request = {};
+        const request = {};
         let method = 'privatePostUserTransactions';
         let market = undefined;
         if (typeof symbol !== 'undefined') {
@@ -345,19 +347,18 @@ module.exports = class bitkub extends Exchange {
             request['pair'] = market['id'];
             method += 'Pair';
         }
-        let response = await this[method] (this.extend (request, params));
+        const response = await this[method] (this.extend (request, params));
         return this.parseTrades (response, market, since, limit);
     }
 
     parseOrder (order, market = undefined) {
-      throw new Error('Not implemented')
-        let id = this.safeString (order, 'id');
+        throw new Error ('Not implemented');
+        const id = this.safeString (order, 'id');
         let timestamp = undefined;
         let iso8601 = undefined;
         let side = this.safeString (order, 'type');
-        if (typeof side !== 'undefined')
-            side = (side === '1') ? 'sell' : 'buy';
-        let datetimeString = this.safeString (order, 'datetime');
+        if (typeof side !== 'undefined') side = (side === '1') ? 'sell' : 'buy';
+        const datetimeString = this.safeString (order, 'datetime');
         if (typeof datetimeString !== 'undefined') {
             timestamp = this.parse8601 (datetimeString);
             iso8601 = this.iso8601 (timestamp);
@@ -365,62 +366,53 @@ module.exports = class bitkub extends Exchange {
         let symbol = undefined;
         if (typeof market === 'undefined') {
             if ('currency_pair' in order) {
-                let marketId = order['currency_pair'];
-                if (marketId in this.markets_by_id)
-                    market = this.markets_by_id[marketId];
+                const marketId = order['currency_pair'];
+                if (marketId in this.markets_by_id) market = this.markets_by_id[marketId];
             }
         }
         let amount = this.safeFloat (order, 'amount');
         let filled = 0.0;
-        let trades = [];
-        let transactions = this.safeValue (order, 'transactions');
+        const trades = [];
+        const transactions = this.safeValue (order, 'transactions');
         let feeCost = undefined;
         let cost = undefined;
         if (typeof transactions !== 'undefined') {
             if (Array.isArray (transactions)) {
                 for (let i = 0; i < transactions.length; i++) {
-                    let trade = this.parseTrade (this.extend ({
+                    const trade = this.parseTrade (this.extend ({
                         'order_id': id,
                         'side': side,
                     }, transactions[i]), market);
                     filled += trade['amount'];
-                    if (typeof feeCost === 'undefined')
-                        feeCost = 0.0;
+                    if (typeof feeCost === 'undefined') feeCost = 0.0;
                     feeCost += trade['fee']['cost'];
-                    if (typeof cost === 'undefined')
-                        cost = 0.0;
+                    if (typeof cost === 'undefined') cost = 0.0;
                     cost += trade['cost'];
                     trades.push (trade);
                 }
             }
         }
         let status = this.safeString (order, 'status');
-        if ((status === 'In Queue') || (status === 'Open'))
-            status = 'open';
+        if ((status === 'In Queue') || (status === 'Open')) status = 'open';
         else if (status === 'Finished') {
             status = 'closed';
-            if (typeof amount === 'undefined')
-                amount = filled;
+            if (typeof amount === 'undefined') amount = filled;
         }
         let remaining = undefined;
-        if (typeof amount !== 'undefined')
-            remaining = amount - filled;
+        if (typeof amount !== 'undefined') remaining = amount - filled;
         let price = this.safeFloat (order, 'price');
-        if (typeof market === 'undefined')
-            market = this.getMarketFromTrades (trades);
+        if (typeof market === 'undefined') market = this.getMarketFromTrades (trades);
         let feeCurrency = undefined;
         if (typeof market !== 'undefined') {
             symbol = market['symbol'];
             feeCurrency = market['quote'];
         }
         if (typeof cost === 'undefined') {
-            if (typeof price !== 'undefined')
-                cost = price * filled;
+            if (typeof price !== 'undefined') cost = price * filled;
         } else if (typeof price === 'undefined') {
-            if (filled > 0)
-                price = cost / filled;
+            if (filled > 0) price = cost / filled;
         }
-        let fee = {
+        const fee = {
             'cost': feeCost,
             'currency': feeCurrency,
         };
@@ -444,46 +436,41 @@ module.exports = class bitkub extends Exchange {
     }
 
     async fetchOpenOrders (symbol = undefined, since = undefined, limit = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         let market = undefined;
         if (typeof symbol !== 'undefined') {
             await this.loadMarkets ();
             market = this.market (symbol);
         }
-        let orders = await this.privatePostOpenOrdersAll ();
+        const orders = await this.privatePostOpenOrdersAll ();
         return this.parseOrders (orders, market, since, limit);
     }
 
     getCurrencyName (code) {
-      throw new Error('Not implemented')
-        if (code === 'BTC')
-            return 'bitcoin';
+        throw new Error ('Not implemented');
+        if (code === 'BTC') return 'bitcoin';
         return code.toLowerCase ();
     }
 
     isFiat (code) {
-        if (code === 'THB')
-            return true;
-        if (code === 'USD')
-            return true;
-        if (code === 'EUR')
-            return true;
+        if (code === 'THB') return true;
+        if (code === 'USD') return true;
+        if (code === 'EUR') return true;
         return false;
     }
 
     async fetchDepositAddress (code, params = {}) {
-      throw new Error('Not implemented')
-        if (this.isFiat (code))
-            throw new NotSupported (this.id + ' fiat fetchDepositAddress() for ' + code + ' is not implemented yet');
-        let name = this.getCurrencyName (code);
-        let v1 = (code === 'BTC');
+        throw new Error ('Not implemented');
+        if (this.isFiat (code)) throw new NotSupported (this.id + ' fiat fetchDepositAddress() for ' + code + ' is not implemented yet');
+        const name = this.getCurrencyName (code);
+        const v1 = (code === 'BTC');
         let method = v1 ? 'v1' : 'private'; // v1 or v2
         method += 'Post' + this.capitalize (name);
         method += v1 ? 'Deposit' : '';
         method += 'Address';
-        let response = await this[method] (params);
-        let address = v1 ? response : this.safeString (response, 'address');
-        let tag = v1 ? undefined : this.safeString (response, 'destination_tag');
+        const response = await this[method] (params);
+        const address = v1 ? response : this.safeString (response, 'address');
+        const tag = v1 ? undefined : this.safeString (response, 'destination_tag');
         this.checkAddress (address);
         return {
             'currency': code,
@@ -495,16 +482,15 @@ module.exports = class bitkub extends Exchange {
     }
 
     async withdraw (code, amount, address, tag = undefined, params = {}) {
-      throw new Error('Not implemented')
+        throw new Error ('Not implemented');
         this.checkAddress (address);
-        if (this.isFiat (code))
-            throw new NotSupported (this.id + ' fiat withdraw() for ' + code + ' is not implemented yet');
-        let name = this.getCurrencyName (code);
-        let request = {
+        if (this.isFiat (code)) throw new NotSupported (this.id + ' fiat withdraw() for ' + code + ' is not implemented yet');
+        const name = this.getCurrencyName (code);
+        const request = {
             'amount': amount,
             'address': address,
         };
-        let v1 = (code === 'BTC');
+        const v1 = (code === 'BTC');
         let method = v1 ? 'v1' : 'private'; // v1 or v2
         method += 'Post' + this.capitalize (name) + 'Withdrawal';
         let query = params;
@@ -516,7 +502,7 @@ module.exports = class bitkub extends Exchange {
                 throw new ExchangeError (this.id + ' withdraw() requires a destination_tag param for ' + code);
             }
         }
-        let response = await this[method] (this.extend (request, query));
+        const response = await this[method] (this.extend (request, query));
         return {
             'info': response,
             'id': response['id'],
@@ -524,35 +510,29 @@ module.exports = class bitkub extends Exchange {
     }
 
     nonce () {
-        return this.milliseconds ()
+        return this.milliseconds ();
     }
 
     sign (path, api = 'public', method = 'GET', params = {}, headers = undefined, body = undefined) {
         let url = this.urls['api'];
         url += this.implodeParams (path, params);
-        let query = this.omit (params, this.extractParams (path));
+        const query = this.omit (params, this.extractParams (path));
         if (api === 'public') {
-            if (Object.keys (query).length)
-                url += '?' + this.urlencode (query);
+            if (Object.keys (query).length) url += '?' + this.urlencode (query);
         } else {
             this.checkRequiredCredentials ();
-            let ts = this.seconds()
-            let nonce = this.nonce()
-
-            params['ts'] = ts
+            const ts = this.seconds ();
+            const nonce = this.nonce ();
+            params['ts'] = ts;
             // params['non'] = nonce
-
-            let auth = JSON.stringify (params)
-            
-            let signature = this.encode (this.hmac (this.encode (auth), this.encode (this.secret)));
-
-            params['sig'] = signature
-            
-            body = JSON.stringify(params);
+            const auth = JSON.stringify (params);
+            const signature = this.encode (this.hmac (this.encode (auth), this.encode (this.secret)));
+            params['sig'] = signature;
+            body = JSON.stringify (params);
             headers = {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'X-BTK-APIKEY': this.apiKey
+                'X-BTK-APIKEY': this.apiKey,
             };
         }
         return { 'url': url, 'method': method, 'body': body, 'headers': headers };
@@ -560,21 +540,18 @@ module.exports = class bitkub extends Exchange {
 
     handleErrors (httpCode, reason, url, method, headers, body) {
         // Refer to https://github.com/bitkub/bitkub-official-api-docs/blob/master/restful-api.md#error-codes
-        if (typeof body !== 'string')
-            return; // fallback to default error handler
-        if (body.length < 2)
-            return; // fallback to default error handler
+        if (typeof body !== 'string') return; // fallback to default error handler
+        if (body.length < 2) return; // fallback to default error handler
         if ((body[0] === '{') || (body[0] === '[')) {
-            let response = JSON.parse (body);
-            let status = this.safeInteger (response, 'error');
+            const response = JSON.parse (body);
+            const status = this.safeInteger (response, 'error');
             if (status > 0) {
-                if (status === 1 || ( status >= 10 && status <= 15 ) || status === 22 ) {
-                    throw new BadRequest ( this.id + ' some parameters are invalid; status: ' + status )
+                if (status === 1 || (status >= 10 && status <= 15) || status === 22) {
+                    throw new BadRequest (this.id + ' some parameters are invalid; status: ' + status);
                 }
-                if ((status >= 2 && status <= 9) || status === 25 || status === 45 || status === 46 || status === 52 ) {
-                    throw new AuthenticationError( this.id + ' failed auth or permissions; status ' + status)
+                if ((status >= 2 && status <= 9) || status === 25 || status === 45 || status === 46 || status === 52) {
+                    throw new AuthenticationError (this.id + ' failed auth or permissions; status ' + status);
                 }
-
                 throw new ExchangeError (this.id + ' ' + this.json (response));
             }
         }
