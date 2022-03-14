@@ -125,38 +125,6 @@ module.exports = class bitkub extends Exchange {
         return this.parseOrderBook (orderbook, timestamp);
     }
 
-    async fetchTicker (symbol, params = {}) {
-      throw new Error('Not implemented')
-        await this.loadMarkets ();
-        let ticker = await this.publicGetTickerPair (this.extend ({
-            'pair': this.marketId (symbol),
-        }, params));
-        let timestamp = parseInt (ticker['timestamp']) * 1000;
-        let vwap = parseFloat (ticker['vwap']);
-        let baseVolume = parseFloat (ticker['volume']);
-        let quoteVolume = baseVolume * vwap;
-        return {
-            'symbol': symbol,
-            'timestamp': timestamp,
-            'datetime': this.iso8601 (timestamp),
-            'high': parseFloat (ticker['high']),
-            'low': parseFloat (ticker['low']),
-            'bid': parseFloat (ticker['bid']),
-            'ask': parseFloat (ticker['ask']),
-            'vwap': vwap,
-            'open': parseFloat (ticker['open']),
-            'close': undefined,
-            'first': undefined,
-            'last': parseFloat (ticker['last']),
-            'change': undefined,
-            'percentage': undefined,
-            'average': undefined,
-            'baseVolume': baseVolume,
-            'quoteVolume': quoteVolume,
-            'info': ticker,
-        };
-    }
-
     getMarketFromTrade (trade) {
       throw new Error('Not implemented')
         trade = this.omit (trade, [
