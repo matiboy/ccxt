@@ -320,14 +320,15 @@ module.exports = class bitkub extends Exchange {
             'amt': this.withoutTrailingZeroes (amount),
             'typ': type
         };
-        if (type === 'market')
-            price = 0
-        else
-        order['rat'] = this.withoutTrailingZeroes (price);
+        if (type === 'market') {
+            price = 0;
+        } else {
+            order['rat'] = this.withoutTrailingZeroes (price);
+        }
         const isTest = this.safeValue (params, 'test')
+        delete params['test'];
         if (isTest) {
             method += 'Test'
-            delete params['test']
         }
         let response = await this[method] (this.extend (order, params));
         return {
