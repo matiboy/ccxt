@@ -312,12 +312,9 @@ module.exports = class bitkub extends Exchange {
     }
 
     parseOrderStatus (order) {
-      throw new Error('Not implemented')
-        if ((order['status'] === 'Queue') || (order['status'] === 'Open'))
-            return 'open';
-        if (order['status'] === 'Finished')
+        if ((order['status'] === 'filled') || (order['remaining'] === 0))
             return 'closed';
-        return order['status'];
+        return 'open';
     }
 
     async fetchOrderStatus (id, symbol = undefined, params = {}) {
