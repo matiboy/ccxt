@@ -60,6 +60,7 @@ module.exports = class bitkub extends Exchange {
                         'crypto/withdraw',
                         'market/my-open-orders',
                         'market/my-order-history',
+                        'crypto/withdraw',
                     ],
                 },
             },
@@ -482,30 +483,29 @@ module.exports = class bitkub extends Exchange {
     }
 
     async withdraw (code, amount, address, tag = undefined, params = {}) {
-        throw new Error ('Not implemented');
+        [ tag, params ] = this.handleWithdrawTagAndParams (tag, params);
         this.checkAddress (address);
         if (this.isFiat (code)) throw new NotSupported (this.id + ' fiat withdraw() for ' + code + ' is not implemented yet');
         const name = this.getCurrencyName (code);
         const request = {
-            'amount': amount,
-            'address': address,
+            'cur': name,
+            'amt': amount,
+            'adr': address,
         };
-        const v1 = (code === 'BTC');
-        let method = v1 ? 'v1' : 'private'; // v1 or v2
-        method += 'Post' + this.capitalize (name) + 'Withdrawal';
         let query = params;
         if (code === 'XRP') {
             if (typeof tag !== 'undefined') {
-                request['destination_tag'] = tag;
-                query = this.omit (params, 'destination_tag');
+                request['mem'] = tag;
+                query = this.omit (params, 'mem');
             } else {
                 throw new ExchangeError (this.id + ' withdraw() requires a destination_tag param for ' + code);
             }
         }
-        const response = await this[method] (this.extend (request, query));
+        const response = await this.privatePostCryptoWithdraw (this.extend (request, query));
+        const id = this.safeString (response['response'], 'txn');
         return {
             'info': response,
-            'id': response['id'],
+            'id': id,
         };
     }
 
