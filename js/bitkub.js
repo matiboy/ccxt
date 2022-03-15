@@ -27,6 +27,7 @@ module.exports = class bitkub extends Exchange {
                 'fetchMyTrades': true,
                 'fetchOrders': true,
                 'transfer': true,
+                'withdraw': true,
             },
             'urls': {
                 'logo': 'https://www.bitkub.com/static/images/logo-white.png',
